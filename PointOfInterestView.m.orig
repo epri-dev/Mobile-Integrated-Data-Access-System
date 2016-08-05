@@ -1,0 +1,158 @@
+//
+//  PointOfInterestView.m
+//  StreetView
+//
+//  Created by Susie Rudd on 29/08/2011.
+//  Copyright 2011 Strathclyde. All rights reserved.
+//
+
+#import "PointOfInterestView.h"
+#import "POIInformationView.h"
+#import "IconGenerator.h"
+
+@implementation PointOfInterestView
+@synthesize viewController;
+
+- (id)initForPOI:(PointOfInterest *)newpoi{
+    //this is where we set up the view for a point of interests
+    poi = newpoi; 
+    
+    int innerBoxHeight = 20;
+    
+    CGRect theFrame = CGRectMake(0.0, 0.0, box_width, box_height);
+    if ((self = [super initWithFrame:theFrame])) {
+        
+        UIImageView *marker	= [[UIImageView alloc] initWithFrame:CGRectZero];
+        UIImage *icon = [UIImage imageNamed:@"POI64.png"];
+        if ([[newpoi voltageLevels] count] >0){
+            int size = 18;
+            if ([[newpoi voltageLevels] count]> 1)
+                size =24;
+            UIImage *overlay = [IconGenerator getIconOfWidth:size height:size voltages:[newpoi voltageLevels]]; 
+            CGRect iconBoundingBox = CGRectMake (0, 0, icon.size.width, icon.size.height);
+            CGRect overlayBoundingBox = CGRectMake (icon.size.width-overlay.size.width, 0,
+                                                    overlay.size.width, overlay.size.height);
+            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+            CGContextRef myBitmapContext = CGBitmapContextCreate(NULL, icon.size.width, icon.size.height, 8, 4 * icon.size.width, colorSpace, kCGImageAlphaPremultipliedFirst);
+            CGContextDrawImage(myBitmapContext, iconBoundingBox, icon.CGImage);
+            CGContextDrawImage(myBitmapContext, overlayBoundingBox, overlay.CGImage);
+            icon = [UIImage imageWithCGImage: CGBitmapContextCreateImage (myBitmapContext)];
+            CGContextRelease (myBitmapContext);
+        
+         }
+        [marker setImage:	icon];
+        
+        int imageWidth = [marker image].size.width;
+        int imageHeight = [marker image].size.height;
+        
+        [marker setFrame:CGRectMake(-(imageWidth/2), 0, imageWidth, imageHeight)]; 
+        
+        [self addSubview:marker];
+        [marker release];
+        
+        UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake((imageWidth/2), innerBoxHeight, box_width, innerBoxHeight)];
+        [title setBackgroundColor:[UIColor clearColor]];
+        [title setTextColor:[UIColor redColor]];
+        [title setTextAlignment:UITextAlignmentLeft];  
+        [title setText: newpoi.title];
+        title.font = [UIFont fontWithName:@"Helvetica" size: 16.0]; // Sans-Serif font I think :-)
+
+        
+        [self addSubview:title];
+        [title release];
+        
+        UILabel *description = [[UILabel alloc] initWithFrame:CGRectMake((imageWidth/2), innerBoxHeight + innerBoxHeight, box_width, innerBoxHeight)];
+        [description setBackgroundColor:[UIColor clearColor]];
+        [description setTextColor:[UIColor orangeColor]];
+        [description setTextAlignment:UITextAlignmentLeft];  
+        [description setText: newpoi.description];
+        description.font = [UIFont fontWithName:@"Helvetica" size: 12.0];
+        
+        [self addSubview:description];
+        [description release];
+        
+        [self setUserInteractionEnabled:YES];
+        
+        UITapGestureRecognizer *tapgr = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tap:)];
+        [self addGestureRecognizer:tapgr];
+        [tapgr release];
+        
+    }
+    
+    return self;
+}
+
+- (BOOL)canBecomeFirstResponder
+{
+    return YES;
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    return YES;
+}
+
+- (void)tapEnded:(UITapGestureRecognizer *)gesture{
+    if(diagram !=nil ){
+        [diagram removeFromSuperview];
+        UITapGestureRecognizer *tapgr = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tap:)];
+        [self addGestureRecognizer:tapgr];
+        [tapgr release];
+    }
+}
+
+- (void)tap:(UITapGestureRecognizer *)gesture{
+    diagram = [[UIImageView alloc] initWithFrame:CGRectZero];
+
+//        if(poi.circuitDiagram != nil){
+//            [diagram setImage:	[UIImage imageNamed:poi.circuitDiagram]];
+//            [diagram setFrame:CGRectMake(0, 0, diagram.image.size.width, diagram.image.size.height)]; 
+//            UITapGestureRecognizer *tapgr = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapEnded:)];
+//            [self addGestureRecognizer:tapgr];
+//            [tapgr release];
+//            
+//            [self addSubview:diagram];
+//        }
+    POIInformationView *controller = [[POIInformationView alloc] init ];
+    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:controller];
+    [navController.view addSubview:controller.view];
+    [controller release];
+
+    UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
+
+    if(UIDeviceOrientationIsPortrait(orientation)){
+        navController.view.frame = CGRectMake(0, 1024/2, 768, 1024/2);
+    }
+    else if(UIDeviceOrientationIsLandscape(orientation)){
+        navController.view.frame = CGRectMake(0, 768/2, 1024, 768/2);
+    }
+    
+    
+    //[[[UIApplication sharedApplication] keyWindow] addSubview:navController.view];
+    [viewController.view addSubview:navController.view];
+    
+    
+
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
+{
+    // Return YES for supported orientations
+	return YES;
+}
+
+/*
+// Only override drawRect: if you perform custom drawing.
+// An empty implementation adversely affects performance during animation.
+- (void)drawRect:(CGRect)rect
+{
+    // Drawing code
+}
+*/
+
+- (void)dealloc
+{
+    [super dealloc];
+    [diagram release];
+}
+
+@end
